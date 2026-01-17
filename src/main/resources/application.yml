@@ -1,32 +1,171 @@
 spring:
   application:
     name: safehaven-service
+  
+  # Docker Compose Configuration (Disabled by default - enable only for local development)
+  # Spring Boot 3.x auto-detects compose.yaml and tries to auto-start services
+  # Set to true ONLY when Docker Desktop is running and you want auto-start behavior
   docker:
     compose:
-      enabled: false
+      enabled: ${SPRING_DOCKER_COMPOSE_ENABLED:false}
+      # Additional compose options (only used if enabled=true)
+      # file: compose.yaml  # Auto-detected by default
+      # lifecycle-management: start_and_stop  # Options: none, start_only, start_and_stop
+  
+  # PostgreSQL Database Configuration (Environment Variable Override)
   datasource:
-    url: jdbc:postgresql://localhost:5432/safehaven_db
-    username: postgres
-    password: postgres
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/safehaven_db}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
+    
+    # HikariCP Connection Pool Configuration (Production-Grade)
+    hikari:
+      # Connection Pool Sizing (Tuned for microservice workloads)
+      minimum-idle: ${DB_POOL_MIN_IDLE:5}
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:20}
+      connection-timeout: ${DB_POOL_CONNECTION_TIMEOUT:30000}
+      idle-timeout: ${DB_POOL_IDLE_TIMEOUT:600000}
+      max-lifetime: ${DB_POOL_MAX_LIFETIME:1800000}
+      leak-detection-threshold: ${DB_POOL_LEAK_DETECTION:60000}
+      
+      # Connection Health Checks
+      connection-test-query: SELECT 1
+      validation-timeout: ${DB_POOL_VALIDATION_TIMEOUT:5000}
+      
+      # Performance Tuning
+      auto-commit: false
+      register-mbeans: true
+      
+      # Connection Properties
+      data-source-properties:
+        cachePrepStmts: true
+        prepStmtCacheSize: 250
+        prepStmtCacheSqlLimit: 2048
+        useServerPrepStmts: true
+        useLocalSessionState: true
+        rewriteBatchedStatements: true
+        cacheResultSetMetadata: true
+        cacheServerConfiguration: true
+        elideSetAutoCommits: true
+        maintainTimeStats: false
+        socket-timeout: ${DB_SOCKET_TIMEOUT:30}
+        tcpKeepAlive: true
+      
+      # Pool Name for Monitoring
+      pool-name: SafeHavenHikariPool
+  
+  # JPA/Hibernate Configuration
   jpa:
     hibernate:
-      ddl-auto: update
-    show-sql: true
+      # Disable auto DDL - Flyway handles schema migrations
+      ddl-auto: none
+    show-sql: ${JPA_SHOW_SQL:false}
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-        format_sql: true
+        format_sql: ${JPA_FORMAT_SQL:false}
+        jdbc:
+          batch_size: 50
+          order_inserts: true
+          order_updates: true
+        connection:
+          provider_disables_autocommit: true
+    open-in-view: false
+  
+  # Flyway Migration Configuration
+  flyway:
+    enabled: ${FLYWAY_ENABLED:true}
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    baseline-version: 0
+    validate-on-migrate: true
+    clean-disabled: true
+    
+  # Jackson Configuration
   jackson:
     serialization:
       write-dates-as-timestamps: false
+    time-zone: UTC
+    default-property-inclusion: non_null
+  
+  # Async Configuration
+  task:
+    execution:
+      pool:
+        core-size: ${ASYNC_CORE_SIZE:5}
+        max-size: ${ASYNC_MAX_SIZE:10}
+        queue-capacity: ${ASYNC_QUEUE_CAPACITY:100}
+        thread-name-prefix: safehaven-async-
+      shutdown:
+        await-termination: true
+        await-termination-period: ${ASYNC_SHUTDOWN_TIMEOUT:60s}
 
+# Server Configuration
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
+  shutdown: graceful
+  error:
+    include-message: always
+    include-binding-errors: always
+    include-stacktrace: ${INCLUDE_STACKTRACE:never}
+    include-exception: false
 
+# Actuator Configuration (Production Health Checks)
+management:
+  endpoints:
+    web:
+      exposure:
+        include: ${ACTUATOR_ENDPOINTS:health,info,metrics,prometheus}
+  endpoint:
+    health:
+      show-details: ${ACTUATOR_HEALTH_DETAILS:when-authorized}
+      probes:
+        enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+  health:
+    db:
+      enabled: true
+    diskspace:
+      enabled: true
+    defaults:
+      enabled: true
+
+# Logging Configuration
 logging:
   level:
-    org.planmoni.safehavenservice: DEBUG
+    root: ${LOG_LEVEL:INFO}
+    org.planmoni.safehavenservice: ${SERVICE_LOG_LEVEL:DEBUG}
     org.springframework.web: INFO
-    org.hibernate.SQL: DEBUG
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.springframework.security: DEBUG
+    org.hibernate.SQL: ${HIBERNATE_SQL_LOG:false}
+    org.hibernate.type.descriptor.sql.BasicBinder: ${HIBERNATE_BINDER_LOG:false}
+    com.zaxxer.hikari: ${HIKARI_LOG_LEVEL:INFO}
+    org.flywaydb: ${FLYWAY_LOG_LEVEL:INFO}
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+
+# SafeHaven Integration Configuration
+safehaven:
+  oauth:
+    client-id: ${SAFEHAVEN_CLIENT_ID:}
+    client-secret: ${SAFEHAVEN_CLIENT_SECRET:}
+    token-endpoint: ${SAFEHAVEN_TOKEN_ENDPOINT:https://api.safehaven.com/oauth/token}
+    authorization-endpoint: ${SAFEHAVEN_AUTH_ENDPOINT:https://api.safehaven.com/oauth/authorize}
+    redirect-uri: ${SAFEHAVEN_REDIRECT_URI:http://localhost:8080/api/v1/safehaven/oauth/callback}
+    scope: ${SAFEHAVEN_SCOPE:read write}
+  webhook:
+    secret: ${SAFEHAVEN_WEBHOOK_SECRET:}
+    signature-header: X-SafeHaven-Signature
+    event-id-header: X-SafeHaven-Event-Id
+    timeout-seconds: ${WEBHOOK_TIMEOUT:30}
+  integration:
+    base-url: ${SAFEHAVEN_BASE_URL:https://api.safehaven.com}
+    timeout-ms: ${SAFEHAVEN_TIMEOUT_MS:30000}
+    retry:
+      max-attempts: ${SAFEHAVEN_RETRY_MAX:3}
+      backoff-ms: ${SAFEHAVEN_RETRY_BACKOFF:1000}

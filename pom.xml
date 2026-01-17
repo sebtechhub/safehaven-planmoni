@@ -29,6 +29,7 @@
 	<properties>
 		<java.version>17</java.version>
 		<mapstruct.version>1.5.5.Final</mapstruct.version>
+		<lombok.version>1.18.30</lombok.version>
 		<lombok-mapstruct-binding.version>0.2.0</lombok-mapstruct-binding.version>
 	</properties>
 	<dependencies>
@@ -60,6 +61,22 @@
 			<scope>runtime</scope>
 		</dependency>
 		<dependency>
+			<groupId>org.flywaydb</groupId>
+			<artifactId>flyway-core</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.flywaydb</groupId>
+			<artifactId>flyway-database-postgresql</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-cache</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.github.ben-manes.caffeine</groupId>
+			<artifactId>caffeine</artifactId>
+		</dependency>
+		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
 			<optional>true</optional>
@@ -89,6 +106,11 @@
 			<artifactId>spring-boot-starter-webmvc-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+		<dependency>
+    <groupId>com.fasterxml.jackson.datatype</groupId>
+    <artifactId>jackson-datatype-jsr310</artifactId>
+</dependency>
+
 	</dependencies>
 
 	<build>
@@ -100,25 +122,40 @@
 					<source>17</source>
 					<target>17</target>
 					<annotationProcessorPaths>
-						
-						<path>
-                        <groupId>org.mapstruct</groupId>
-                        <artifactId>mapstruct-processor</artifactId>
-                        <version>1.5.5.Final</version>
-                    </path>
-				<path>
-    <groupId>org.projectlombok</groupId>
-    <artifactId>lombok-mapstruct-binding</artifactId>
-    <version>0.2.0</version>
-</path>
-
+						<!-- Lombok MUST come FIRST to generate getters/setters/builders -->
+						<!-- MapStruct runs SECOND and reads Lombok-generated code -->
 						<path>
 							<groupId>org.projectlombok</groupId>
 							<artifactId>lombok</artifactId>
 							<version>${lombok.version}</version>
 						</path>
-
+						<!-- lombok-mapstruct-binding enables MapStruct to work with Lombok -->
+						<path>
+							<groupId>org.projectlombok</groupId>
+							<artifactId>lombok-mapstruct-binding</artifactId>
+							<version>${lombok-mapstruct-binding.version}</version>
+						</path>
+						<!-- MapStruct processor runs AFTER Lombok -->
+						<path>
+							<groupId>org.mapstruct</groupId>
+							<artifactId>mapstruct-processor</artifactId>
+							<version>${mapstruct.version}</version>
+						</path>
 					</annotationProcessorPaths>
+					<!-- Fail build if annotation processing errors occur -->
+					<compilerArgs>
+						<arg>-Amapstruct.verbose=true</arg>
+						<arg>-Amapstruct.suppressGeneratorTimestamp=false</arg>
+						<arg>-Amapstruct.suppressGeneratorVersionInfoComment=false</arg>
+						<arg>-Xmaxerrs</arg>
+						<arg>1000</arg>
+						<arg>-Xmaxwarns</arg>
+						<arg>1000</arg>
+					</compilerArgs>
+					<!-- Fail build if no generated files -->
+					<showWarnings>true</showWarnings>
+					<showDeprecation>true</showDeprecation>
+					<failOnWarning>true</failOnWarning>
 				</configuration>
 			</plugin>
 			<plugin>
@@ -131,6 +168,28 @@
 							<artifactId>lombok</artifactId>
 						</exclude>
 					</excludes>
+					<!-- Fail build if application context cannot load -->
+					<jvmArguments>
+						-Dspring.main.lazy-initialization=false
+					</jvmArguments>
+				</configuration>
+			</plugin>
+			<!-- Surefire Plugin for tests -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>3.2.5</version>
+				<configuration>
+					<includes>
+						<include>**/*Test.java</include>
+						<include>**/*Tests.java</include>
+					</includes>
+					<!-- Fail build if tests fail -->
+					<testFailureIgnore>false</testFailureIgnore>
+					<!-- Enable verbose test output -->
+					<printSummary>true</printSummary>
+					<forkCount>1</forkCount>
+					<reuseForks>true</reuseForks>
 				</configuration>
 			</plugin>
 		</plugins>
