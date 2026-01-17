@@ -15,7 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/safehavens")
+@RequestMapping("/api/v1/safehaven")
 @RequiredArgsConstructor
 @Slf4j
 public class SafeHavenController {
@@ -25,21 +25,21 @@ public class SafeHavenController {
     @PostMapping
     public ResponseEntity<SafeHavenResponse> createSafeHaven(
             @Valid @RequestBody SafeHavenCreateRequest request) {
-        log.info("POST /api/v1/safehavens - Creating SafeHaven");
+        log.info("POST /api/v1/safehaven - Creating SafeHaven");
         SafeHavenResponse response = safeHavenService.createSafeHaven(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<SafeHavenResponse> getSafeHavenById(@PathVariable Long id) {
-        log.info("GET /api/v1/safehavens/{} - Fetching SafeHaven by ID", id);
+        log.info("GET /api/v1/safehaven/{} - Fetching SafeHaven by ID", id);
         SafeHavenResponse response = safeHavenService.getSafeHavenById(id);
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/reference/{reference}")
     public ResponseEntity<SafeHavenResponse> getSafeHavenByReference(@PathVariable String reference) {
-        log.info("GET /api/v1/safehavens/reference/{} - Fetching SafeHaven by reference", reference);
+        log.info("GET /api/v1/safehaven/reference/{} - Fetching SafeHaven by reference", reference);
         SafeHavenResponse response = safeHavenService.getSafeHavenByReference(reference);
         return ResponseEntity.ok(response);
     }
@@ -47,7 +47,7 @@ public class SafeHavenController {
     @GetMapping
     public ResponseEntity<Page<SafeHavenResponse>> getAllSafeHavens(
             @PageableDefault(size = 20, sort = "createdAt") Pageable pageable) {
-        log.info("GET /api/v1/safehavens - Fetching all SafeHavens with pagination");
+        log.info("GET /api/v1/safehaven - Fetching all SafeHavens with pagination");
         Page<SafeHavenResponse> response = safeHavenService.getAllSafeHavens(pageable);
         return ResponseEntity.ok(response);
     }
@@ -56,14 +56,14 @@ public class SafeHavenController {
     public ResponseEntity<SafeHavenResponse> updateSafeHaven(
             @PathVariable Long id,
             @Valid @RequestBody SafeHavenUpdateRequest request) {
-        log.info("PUT /api/v1/safehavens/{} - Updating SafeHaven", id);
+        log.info("PUT /api/v1/safehaven/{} - Updating SafeHaven", id);
         SafeHavenResponse response = safeHavenService.updateSafeHaven(id, request);
         return ResponseEntity.ok(response);
     }
 
     @PatchMapping("/{id}/suspend")
     public ResponseEntity<SafeHavenResponse> suspendSafeHaven(@PathVariable Long id) {
-        log.info("PATCH /api/v1/safehavens/{}/suspend - Suspending SafeHaven", id);
+        log.info("PATCH /api/v1/safehaven/{}/suspend - Suspending SafeHaven", id);
         SafeHavenResponse response = safeHavenService.suspendSafeHaven(id);
         return ResponseEntity.ok(response);
     }

@@ -14,9 +14,9 @@ spring:
   
   # PostgreSQL Database Configuration (Environment Variable Override)
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/safehaven_db}
-    username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:postgres}
+    url: ${DB_URL:jdbc:postgresql://postgres:5432/safehaven}
+    username: ${DB_USERNAME:safehaven_user}
+    password: ${DB_PASSWORD:safehaven_password}
     driver-class-name: org.postgresql.Driver
     
     # HikariCP Connection Pool Configuration (Production-Grade)
@@ -83,9 +83,10 @@ spring:
     clean-disabled: true
     
   # Jackson Configuration
+  # Note: Spring Boot 4.x uses Jackson 3 (tools.jackson.*) which has different SerializationFeature values
+  # Jackson configuration is handled in JacksonConfig.java bean for better control and compatibility
+  # Removed: write-dates-as-timestamps (not available in Jackson 3, configured in JacksonConfig bean)
   jackson:
-    serialization:
-      write-dates-as-timestamps: false
     time-zone: UTC
     default-property-inclusion: non_null
   
