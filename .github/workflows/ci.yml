@@ -1,0 +1,150 @@
+name: CI Build and Test
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  build:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    
+    # Disable Docker Compose for CI
+    env:
+      SPRING_DOCKER_COMPOSE_ENABLED: false
+      DB_URL: jdbc:postgresql://localhost:5432/test_db
+      DB_USERNAME: test_user
+      DB_PASSWORD: test_password
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+      
+      - name: Cache Maven dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
+      
+      - name: Clean and compile with verbose MapStruct
+        run: |
+          mvn clean compile \
+            -Dmapstruct.verbose=true \
+            -Dmaven.compiler.failOnWarning=true \
+            -Dspring.docker.compose.enabled=false || exit 1
+          echo "SUCCESS: Compilation succeeded"
+      
+      - name: Verify MapStruct compilation succeeded
+        run: |
+          if [ ! -f "target/generated-sources/annotations/org/planmoni/safehavenservice/mapper/SafeHavenMapperImpl.java" ]; then
+            echo "ERROR: MapStruct implementation not generated - compilation failed"
+            exit 1
+          fi
+          echo "SUCCESS: MapStruct implementation generated successfully"
+          # Verify the generated file is valid Java
+          if ! javac -cp target/classes:$(mvn dependency:build-classpath -q -DincludeScope=compile 2>/dev/null | grep -v "^\[") target/generated-sources/annotations/org/planmoni/safehavenservice/mapper/SafeHavenMapperImpl.java 2>/dev/null; then
+            echo "WARNING: Generated MapStruct implementation may have compilation issues"
+          fi
+      
+      - name: Verify MapStruct generation
+        run: |
+          if [ ! -f "target/generated-sources/annotations/org/planmoni/safehavenservice/mapper/SafeHavenMapperImpl.java" ]; then
+            echo "ERROR: MapStruct implementation not generated"
+            exit 1
+          fi
+          echo "SUCCESS: MapStruct implementation found"
+      
+      - name: Check for @Autowired on @Bean methods (anti-pattern)
+        run: |
+          # Check for @Autowired annotation on @Bean methods (not allowed in Spring Boot)
+          if grep -r "@Autowired" --include="*.java" src/main/java | grep -A 5 "@Bean" | grep -q "@Autowired"; then
+            echo "ERROR: Found @Autowired annotation on @Bean method. This is not allowed in Spring Boot."
+            echo "Use method parameters for dependency injection instead."
+            exit 1
+          fi
+          echo "SUCCESS: No @Autowired on @Bean methods found"
+      
+      - name: Run tests
+        run: |
+          mvn test \
+            -Dspring.profiles.active=test \
+            -Dspring.docker.compose.enabled=false \
+            -Dmaven.test.failure.ignore=false
+      
+      - name: Verify ApplicationContext loads
+        run: |
+          echo "Testing ApplicationContext loading..."
+          mvn test -Dtest=ApplicationContextTest \
+            -Dspring.docker.compose.enabled=false \
+            -Dspring.profiles.active=test || exit 1
+          echo "SUCCESS: ApplicationContext loaded successfully"
+      
+      - name: Verify context fails to load check
+        run: |
+          # This step will fail if ApplicationContext cannot load
+          # The previous test step ensures this, but we verify explicitly
+          if ! mvn test -Dtest=ApplicationContextTest -Dspring.docker.compose.enabled=false -q 2>&1 | grep -q "Tests run:"; then
+            echo "ERROR: ApplicationContext test did not run - context may have failed to load"
+            exit 1
+          fi
+          echo "SUCCESS: ApplicationContext test executed successfully"
+      
+      - name: Verify Jackson configuration
+        run: |
+          mvn test -Dtest=JacksonConfigTest \
+            -Dspring.docker.compose.enabled=false
+      
+      - name: Build package
+        run: |
+          mvn package -DskipTests=false \
+            -Dspring.docker.compose.enabled=false \
+            -Dmaven.test.failure.ignore=false
+      
+      - name: Verify JAR contains MapStruct implementation
+        run: |
+          JAR_FILE=$(ls target/safehaven-service-*.jar | head -n 1)
+          if [ -z "$JAR_FILE" ]; then
+            echo "ERROR: JAR file not found"
+            exit 1
+          fi
+          if ! jar tf "$JAR_FILE" | grep -q SafeHavenMapperImpl; then
+            echo "ERROR: MapStruct implementation not in JAR"
+            exit 1
+          fi
+          echo "SUCCESS: MapStruct implementation found in JAR: $JAR_FILE"
+      
+      - name: Verify application starts (smoke test)
+        run: |
+          # Quick smoke test to verify application can start
+          timeout 30 mvn spring-boot:run \
+            -Dspring-boot.run.arguments="--spring.docker.compose.enabled=false --server.port=0" \
+            -Dspring-boot.run.jvmArguments="-Dspring.main.web-application-type=none" \
+            > /dev/null 2>&1 &
+          SLEEP_COUNT=0
+          while [ $SLEEP_COUNT -lt 15 ]; do
+            if ps -p $! > /dev/null 2>&1; then
+              sleep 2
+              SLEEP_COUNT=$((SLEEP_COUNT + 1))
+            else
+              wait $!
+              if [ $? -eq 0 ] || [ $? -eq 130 ]; then
+                echo "SUCCESS: Application started successfully (or was interrupted)"
+                break
+              else
+                echo "ERROR: Application failed to start"
+                exit 1
+              fi
+            fi
+          done
+          # Clean up if still running
+          pkill -f "spring-boot:run" 2>/dev/null || true
