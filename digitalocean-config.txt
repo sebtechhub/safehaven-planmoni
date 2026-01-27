@@ -1,0 +1,15 @@
+# DigitalOcean PostgreSQL Configuration
+# Copy these values and set as environment variables
+
+# IMPORTANT: Replace YOUR_PASSWORD_HERE with your actual database password
+
+# Database Connection
+SPRING_DATASOURCE_URL=jdbc:postgresql://db-postgresql-nyc3-67789-do-user-31603437-0.h.db.ondigitalocean.com:25060/safehaven?sslmode=require
+SPRING_DATASOURCE_USERNAME=doadmin
+SPRING_DATASOURCE_PASSWORD=YOUR_PASSWORD_HERE
+
+# Optional Settings
+SPRING_PROFILES_ACTIVE=production
+SERVER_PORT=8080
+DB_POOL_MAX_SIZE=20
+DB_POOL_MIN_IDLE=5
