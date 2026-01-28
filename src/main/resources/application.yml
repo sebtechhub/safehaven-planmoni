@@ -15,6 +15,7 @@ spring:
   # PostgreSQL Database Configuration (Environment Variable Override)
   # For production: Use SPRING_DATASOURCE_* environment variables
   datasource:
+
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/safehaven}
     username: ${SPRING_DATASOURCE_USERNAME:admin}
     password: ${SPRING_DATASOURCE_PASSWORD:admin}
