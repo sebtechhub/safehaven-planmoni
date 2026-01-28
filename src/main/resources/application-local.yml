@@ -23,9 +23,9 @@ spring:
 
   # Override datasource to use Docker Compose managed PostgreSQL
   datasource:
-    url: jdbc:postgresql://localhost:5432/mydatabase
-    username: myuser
-    password: secret
+    url: jdbc:postgresql://localhost:5432/safehaven
+    username: admin
+    password: admin
     driver-class-name: org.postgresql.Driver
 
   # Enable SQL logging for local development
