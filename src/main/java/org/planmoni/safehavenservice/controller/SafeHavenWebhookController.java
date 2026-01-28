@@ -220,6 +220,7 @@ public class SafeHavenWebhookController {
      */
     private String extractEventType(String payload) {
         try {
+            @SuppressWarnings("unchecked")
             Map<String, Object> payloadMap = objectMapper.readValue(payload, Map.class);
             Object eventType = payloadMap.get("type");
             if (eventType != null) {
@@ -257,6 +258,7 @@ public class SafeHavenWebhookController {
      */
     private Long extractIdentityMappingId(String payload) {
         try {
+            @SuppressWarnings("unchecked")
             Map<String, Object> payloadMap = objectMapper.readValue(payload, Map.class);
             
             // Try different possible field names

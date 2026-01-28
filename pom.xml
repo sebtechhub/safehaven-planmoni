@@ -110,6 +110,12 @@
     <groupId>com.fasterxml.jackson.datatype</groupId>
     <artifactId>jackson-datatype-jsr310</artifactId>
 </dependency>
+		<!-- Springdoc OpenAPI 3 (Swagger) - v3.x for Spring Boot 4.0 -->
+		<dependency>
+			<groupId>org.springdoc</groupId>
+			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+			<version>3.0.1</version>
+		</dependency>
 
 	</dependencies>
 
@@ -121,42 +127,62 @@
 				<configuration>
 					<source>17</source>
 					<target>17</target>
-					<annotationProcessorPaths>
-						<!-- Lombok MUST come FIRST to generate getters/setters/builders -->
-						<!-- MapStruct runs SECOND and reads Lombok-generated code -->
-						<path>
-							<groupId>org.projectlombok</groupId>
-							<artifactId>lombok</artifactId>
-							<version>${lombok.version}</version>
-						</path>
-						<!-- lombok-mapstruct-binding enables MapStruct to work with Lombok -->
-						<path>
-							<groupId>org.projectlombok</groupId>
-							<artifactId>lombok-mapstruct-binding</artifactId>
-							<version>${lombok-mapstruct-binding.version}</version>
-						</path>
-						<!-- MapStruct processor runs AFTER Lombok -->
-						<path>
-							<groupId>org.mapstruct</groupId>
-							<artifactId>mapstruct-processor</artifactId>
-							<version>${mapstruct.version}</version>
-						</path>
-					</annotationProcessorPaths>
-					<!-- Fail build if annotation processing errors occur -->
-					<compilerArgs>
-						<arg>-Amapstruct.verbose=true</arg>
-						<arg>-Amapstruct.suppressGeneratorTimestamp=false</arg>
-						<arg>-Amapstruct.suppressGeneratorVersionInfoComment=false</arg>
-						<arg>-Xmaxerrs</arg>
-						<arg>1000</arg>
-						<arg>-Xmaxwarns</arg>
-						<arg>1000</arg>
-					</compilerArgs>
-					<!-- Fail build if no generated files -->
 					<showWarnings>true</showWarnings>
 					<showDeprecation>true</showDeprecation>
-					<failOnWarning>true</failOnWarning>
 				</configuration>
+				<executions>
+					<!-- Main compilation with MapStruct -->
+					<execution>
+						<id>default-compile</id>
+						<phase>compile</phase>
+						<goals>
+							<goal>compile</goal>
+						</goals>
+						<configuration>
+							<annotationProcessorPaths>
+								<path>
+									<groupId>org.projectlombok</groupId>
+									<artifactId>lombok</artifactId>
+									<version>${lombok.version}</version>
+								</path>
+								<path>
+									<groupId>org.projectlombok</groupId>
+									<artifactId>lombok-mapstruct-binding</artifactId>
+									<version>${lombok-mapstruct-binding.version}</version>
+								</path>
+								<path>
+									<groupId>org.mapstruct</groupId>
+									<artifactId>mapstruct-processor</artifactId>
+									<version>${mapstruct.version}</version>
+								</path>
+							</annotationProcessorPaths>
+							<compilerArgs>
+								<arg>-Amapstruct.verbose=true</arg>
+								<arg>-Amapstruct.suppressGeneratorTimestamp=false</arg>
+								<arg>-Amapstruct.suppressGeneratorVersionInfoComment=false</arg>
+							</compilerArgs>
+							<failOnWarning>true</failOnWarning>
+						</configuration>
+					</execution>
+					<!-- Test compilation without MapStruct options -->
+					<execution>
+						<id>default-testCompile</id>
+						<phase>test-compile</phase>
+						<goals>
+							<goal>testCompile</goal>
+						</goals>
+						<configuration>
+							<annotationProcessorPaths>
+								<path>
+									<groupId>org.projectlombok</groupId>
+									<artifactId>lombok</artifactId>
+									<version>${lombok.version}</version>
+								</path>
+							</annotationProcessorPaths>
+							<failOnWarning>false</failOnWarning>
+						</configuration>
+					</execution>
+				</executions>
 			</plugin>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
