@@ -16,15 +16,9 @@ spring:
   # For production: Use DB_* environment variables (aligns with Docker Compose)
   # For local dev without Docker: defaults to localhost with Docker Compose credentials
   datasource:
-
-    url: ${DB_URL:jdbc:postgresql://postgres:5432/safehaven}
-    username: ${DB_USERNAME:safehaven_user}
-    password: ${DB_PASSWORD:safehaven_password}
-
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/safehaven}
-    username: ${SPRING_DATASOURCE_USERNAME:admin}
-    password: ${SPRING_DATASOURCE_PASSWORD:admin}
-
+    url: ${SPRING_DATASOURCE_URL:${DB_URL:jdbc:postgresql://localhost:5432/safehaven}}
+    username: ${SPRING_DATASOURCE_USERNAME:${DB_USERNAME:admin}}
+    password: ${SPRING_DATASOURCE_PASSWORD:${DB_PASSWORD:admin}}
     driver-class-name: org.postgresql.Driver
     
     # HikariCP Connection Pool Configuration (Production-Grade)
